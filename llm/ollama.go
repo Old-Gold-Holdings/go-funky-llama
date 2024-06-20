@@ -1,7 +1,13 @@
+// Ollama is a wrapper around the Ollama API client that provides
+// a simple interface for interacting with Ollama locally.
+// It also ensures that the required models are available before
+// starting the application.
+
 package llm
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/ollama/ollama/api"
@@ -27,20 +33,26 @@ func (o *Ollama) New(ctx context.Context) {
 		panic(err)
 	}
 
-	models, err := ollamaClient.List(ctx)
+	// Set the client only after checking for a heartbeat
+	o.Client = ollamaClient
+
+	missingModels := o.checkForMissingModels(ctx)
+	if len(missingModels) > 0 {
+		for _, missingModel := range missingModels {
+			err := o.pullModel(ctx, missingModel)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+}
+
+func (o *Ollama) checkForMissingModels(ctx context.Context) []string {
+	models, err := o.Client.List(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	missingModels := o.checkForMissingModels(models)
-	if len(missingModels) > 0 {
-		panic("missing models: " + strings.Join(missingModels, ", "))
-	}
-
-	o.Client = ollamaClient
-}
-
-func (o *Ollama) checkForMissingModels(models *api.ListResponse) []string {
 	missingModels := []string{}
 	for _, requiredModel := range RequiredModels {
 		found := false
@@ -59,7 +71,24 @@ func (o *Ollama) checkForMissingModels(models *api.ListResponse) []string {
 	return missingModels
 }
 
-func (o *Ollama) Chat(ctx context.Context, message string) (string, error) {
+func (o *Ollama) pullModel(ctx context.Context, modelName string) error {
+	fmt.Println("pulling missing model: " + modelName)
+
+	modelPullRequest := &api.PullRequest{
+		Model: modelName,
+	}
+
+	err := o.Client.Pull(ctx, modelPullRequest, func(modelPullResponse api.ProgressResponse) error {
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *Ollama) Chat(ctx context.Context, chatContext []api.Message, message string) (string, error) {
 	responseMessage := api.Message{}
 
 	userMessage := api.Message{
@@ -67,10 +96,12 @@ func (o *Ollama) Chat(ctx context.Context, message string) (string, error) {
 		Content: message,
 	}
 
+	messages := append(chatContext, userMessage)
+
 	stream := false
 	ollamaChatRequest := &api.ChatRequest{
 		Model:    "mistral",
-		Messages: []api.Message{userMessage},
+		Messages: messages,
 		Stream:   &stream,
 	}
 
