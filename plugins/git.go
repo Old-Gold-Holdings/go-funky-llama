@@ -80,7 +80,18 @@ func (g *Git) Branch() (string, error) {
 }
 
 func (g *Git) Commit(message string) error {
-	_, err := exec.Command("git", "commit", "-m", message).Output()
+	// Check if there are any changes to commit
+	status, err := g.Status()
+	if err != nil {
+		return err
+	}
+
+	if !strings.Contains(status, "Changes to be committed") {
+		return errors.New("no changes to commit")
+	}
+
+	// Commit the changes
+	_, err = exec.Command("git", "commit", "-m", message).Output()
 	if err != nil {
 		return errors.New("unable to commit changes")
 	}
@@ -89,11 +100,23 @@ func (g *Git) Commit(message string) error {
 }
 
 func (g *Git) PushCurrentBranch() error {
+	// Get the current branch
 	branch, err := g.Branch()
 	if err != nil {
 		return err
 	}
 
+	// Check if there are any changes to push
+	status, err := g.Status()
+	if err != nil {
+		return err
+	}
+
+	if !strings.Contains(status, "Your branch is ahead of") {
+		return errors.New("no changes to push")
+	}
+
+	// Push the changes
 	_, err = exec.Command("git", "push", "origin", branch).Output()
 	if err != nil {
 		return errors.New("unable to push changes to branch: " + branch)
@@ -103,11 +126,13 @@ func (g *Git) PushCurrentBranch() error {
 }
 
 func (g *Git) PullCurrentBranch() error {
+	// Get the current branch
 	branch, err := g.Branch()
 	if err != nil {
 		return err
 	}
 
+	// Pull the changes
 	_, err = exec.Command("git", "pull", "origin", branch).Output()
 	if err != nil {
 		return errors.New("unable to pull changes from branch: " + branch)
@@ -117,7 +142,18 @@ func (g *Git) PullCurrentBranch() error {
 }
 
 func (g *Git) Checkout(branch string) error {
-	_, err := exec.Command("git", "checkout", branch).Output()
+	// Check if there are any changes to stash
+	status, err := g.Status()
+	if err != nil {
+		return err
+	}
+
+	if strings.Contains(status, "Changes not staged for commit") {
+		return errors.New("unable to checkout branch: " + branch + " due to uncommitted changes")
+	}
+
+	// Checkout the branch
+	_, err = exec.Command("git", "checkout", branch).Output()
 	if err != nil {
 		return errors.New("unable to checkout branch: " + branch)
 	}
