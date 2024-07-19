@@ -106,16 +106,6 @@ func (g *Git) PushCurrentBranch() error {
 		return err
 	}
 
-	// Check if there are any changes to push
-	status, err := g.Status()
-	if err != nil {
-		return err
-	}
-
-	if !strings.Contains(status, "Your branch is ahead of") {
-		return errors.New("no changes to push")
-	}
-
 	// Push the changes
 	_, err = exec.Command("git", "push", "origin", branch).Output()
 	if err != nil {

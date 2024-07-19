@@ -26,7 +26,7 @@ func main() {
 	fmt.Println(status)
 
 	// Commit the changes
-	err = git.Commit("feat: git plugin improvements")
+	err = git.Commit("fix: remove push check")
 	if err != nil {
 		panic(err)
 	}
