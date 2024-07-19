@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Old-Gold-Holdings/go-funky-llama/llm"
-	"github.com/ollama/ollama/api"
+	"github.com/Old-Gold-Holdings/go-funky-llama/plugins"
 )
 
 func main() {
@@ -13,11 +13,27 @@ func main() {
 
 	ollama := llm.Ollama{}
 	ollama.New(ctx)
-	resp, err := ollama.Chat(ctx, []api.Message{}, "What is the meaning of life? Be succinct.")
+
+	git := plugins.Git{}
+	git.New()
+
+	git.AddAll()
+	status, err := git.Status()
 	if err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
 	}
 
-	fmt.Println(resp)
+	fmt.Println(status)
+
+	// Commit the changes
+	err = git.Commit("fix: remove push check")
+	if err != nil {
+		panic(err)
+	}
+
+	// Push the changes
+	err = git.PushCurrentBranch()
+	if err != nil {
+		panic(err)
+	}
 }

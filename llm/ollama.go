@@ -1,8 +1,3 @@
-// Ollama is a wrapper around the Ollama API client that provides
-// a simple interface for interacting with Ollama locally.
-// It also ensures that the required models are available before
-// starting the application.
-
 package llm
 
 import (
@@ -18,6 +13,10 @@ var RequiredModels = []string{
 	"codestral",
 }
 
+// Ollama is a wrapper around the Ollama API client that provides
+// a simple interface for interacting with Ollama locally.
+// It also ensures that the required models are available before
+// starting the application.
 type Ollama struct {
 	Client *api.Client
 }
